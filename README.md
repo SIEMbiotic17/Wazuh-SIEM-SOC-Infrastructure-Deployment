@@ -7,6 +7,7 @@
 4. [Network Configuration](#4-network-configuration)
 5. [Lab Environment Configuration](#5-lab-environment-configuration)
 6. [Server Hardening & Initial Setup](#6-server-hardening--initial-setup)
+7. [Wazuh SIEM Installation & Configuration](#7-wazuh-siem-installation--configuration)
 
 
 ## 1. Project Overview
@@ -226,6 +227,142 @@ lscpu          # CPU info
 #### 6.5 Summary
 
 At this stage, the Ubuntu Server is hardened, updated, and validated. The environment is now prepared for SIEM and IDS deployment in the next phase of the SOC build.
+
+---
+
+
+# 7. Wazuh SIEM Installation & Configuration
+
+This section documents the deployment of the Wazuh all-in-one SIEM stack on the Ubuntu Server SOC node. The installation includes the Wazuh Manager, Wazuh Indexer (OpenSearch), Filebeat, and the Wazuh Dashboard.
+
+The all-in-one deployment model was selected to optimize resource usage within the lab’s 4GB RAM environment while maintaining full SIEM functionality.
+
+---
+
+## 7.1 Installation Script Download
+
+The official Wazuh installation script was downloaded directly from the Wazuh package repository.
+
+**Command used:**
+
+```bash
+curl -O https://packages.wazuh.com/4.14/wazuh-install.sh
+```
+
+This script automates the deployment of all required Wazuh components.
+
+<img src="screenshots/Wazuh/wazuh_script.png" width="700">
+
+---
+
+## 7.2 Executing the All-in-One Installation
+
+The script was made executable and run in all-in-one mode:
+
+```bash
+chmod +x wazuh-install.sh
+sudo ./wazuh-install.sh -a
+```
+
+The installation process:
+
+* Installed required dependencies
+* Deployed Wazuh Manager
+* Installed and configured OpenSearch
+* Installed Filebeat
+* Configured Wazuh Dashboard
+
+<img src="screenshots/Wazuh/wazuh_install_start.png" width="700">
+
+---
+
+## 7.3 Dashboard Credential Generation
+
+Upon successful installation, the script generated default dashboard credentials required for web access.
+
+These credentials allow authentication to the Wazuh Dashboard.
+
+<img src="screenshots/Wazuh/wazuh_dashboard_credentials.png" width="700">
+
+---
+
+## 7.4 Service Verification
+
+After installation, all Wazuh services were verified to ensure they were active and running.
+
+**Commands used:**
+
+```bash
+sudo systemctl status wazuh-manager
+sudo systemctl status wazuh-dashboard
+sudo systemctl status wazuh-indexer
+sudo systemctl status filebeat
+```
+
+All services returned:
+
+```
+active (running)
+```
+
+<img src="screenshots/Wazuh/wazuh_services_running.png" width="700">
+
+---
+
+## 7.5 Firewall Configuration (Port 443)
+
+Since UFW was previously enabled during server hardening, HTTPS traffic had to be explicitly allowed for dashboard access.
+
+**Command used:**
+
+```bash
+sudo ufw allow 443/tcp
+```
+
+This ensures secure browser-based access to the Wazuh Dashboard.
+
+<img src="screenshots/Wazuh/wazuh_port443_open.png" width="700">
+
+---
+
+## 7.6 Dashboard Access & Verification
+
+The Wazuh Dashboard was accessed from the host machine using:
+
+```
+https://192.168.1.136
+```
+
+Because the installation uses a self-signed certificate, the browser displayed a security warning, which was bypassed for lab purposes.
+
+Successful login confirmed:
+
+* Wazuh services are operational
+* OpenSearch indexing is functioning
+* Dashboard is properly connected to the manager
+
+### Login Page
+
+<img src="screenshots/Wazuh/wazuh_dashboard_login.png" width="700">
+
+### Dashboard Home
+
+<img src="screenshots/Wazuh/wazuh_dashboard_home.png" width="700">
+
+---
+
+## 7.7 Summary
+
+At this stage, the Wazuh SIEM stack is fully deployed and operational within the SOC lab environment.
+
+The Ubuntu Server now functions as:
+
+* Centralized log collection server
+* Detection engine
+* Alerting platform
+* Visualization dashboard
+
+The environment is now prepared for endpoint agent deployment and attack simulation testing in the next phase.
 
 ---
 
