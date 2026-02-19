@@ -16,3 +16,22 @@ Through this project, I aim to:
 * Understand how alerts map to real-world attack patterns
 
 This project is structured and documented incrementally to reflect a real SOC deployment lifecycle — from infrastructure setup to detection engineering and incident response analysis.
+
+## 2. Lab Objectives
+
+The lab is designed to replicate core functions of a basic Security Operations Center within a controlled virtual environment.
+
+The key objectives of this setup are:
+
+* Deploy a centralized Ubuntu Server to function as the SOC node
+* Install and configure a SIEM platform for log aggregation and analysis
+* Integrate a network-based intrusion detection system (IDS)
+* Simulate attacker activity from a separate machine within an isolated network
+* Generate, capture, and investigate security alerts
+* Analyze detection logic and correlate events
+* Document findings in a structured and professional format
+
+The long-term goal is to build practical blue team experience by moving beyond theoretical concepts into hands-on monitoring and incident analysis.
+
+
+
