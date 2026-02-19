@@ -65,22 +65,77 @@ All virtual machines in this SOC Home Lab are configured to use **NAT networking
 
 For this lab, the internal subnet is configured as:
 
-<img src="screenshots/ubuntu/nat_config.png" width="600">
-
+<img src="screenshots/ubuntu/nat_config.png" width="500">
 
 This means:
-
-• All VMs receive IP addresses within the range 192.168.1.1 – 192.168.1.254
-• The subnet mask is 255.255.255.0
-• The VMs can communicate directly with each other
-• External internet access is routed through the host system
+* All VMs receive IP addresses within the range 192.168.1.1 – 192.168.1.254
+* The subnet mask is 255.255.255.0
+* The VMs can communicate directly with each other
+* External internet access is routed through the host system
 
 Using a shared subnet is critical for a SOC lab environment because:
 
-• The attacker machine (Kali Linux) must be able to reach the target systems
-• The target machines must forward logs to the SIEM server
-• The SIEM components (Wazuh + Elastic Stack) must communicate internally without network segmentation issues
+* The attacker machine (Kali Linux) must be able to reach the target systems
+* The target machines must forward logs to the SIEM server
+* The SIEM components (Wazuh + Elastic Stack) must communicate internally without network segmentation issues
 
 This configuration simulates a small enterprise internal LAN environment, making it ideal for attack simulation, log collection, and detection testing.
+
+---
+
+## Lab Environment Configuration
+
+### Host Virtualization Platform
+
+The SOC Home Lab is deployed using **VMware Workstation** as the hypervisor. VMware provides stable networking controls and resource allocation, making it suitable for simulating a small enterprise lab environment.
+
+### Operating System
+
+The primary server for this lab runs:
+
+**Ubuntu 22.04.5 LTS Server**
+
+Ubuntu Server was selected due to:
+
+* Long-Term Support (LTS) stability
+* Wide compatibility with security tools
+* Lightweight footprint suitable for SIEM deployments
+* Strong community and enterprise adoption
+
+---
+
+### Virtual Machine Specifications
+
+The Ubuntu Server VM is configured with the following resources:
+
+* Memory: 4 GB RAM
+* CPU: 2 cores
+* Storage: 40 GB disk
+* Network Adapter: VMnet8 (NAT mode)
+
+<img src="screenshots/ubuntu/vm_settings.png" width="600">
+
+### Disk Allocation (While Server Installation)
+
+Confirmation of the allocated disk space during Ubuntu Server installation.
+
+<img src="screenshots/ubuntu/storage_config.png" width="700">
+
+### SSH Installation Verification (While Server Installation)
+
+OpenSSH Server was enabled during installation to allow secure remote access to the Ubuntu Server VM.
+
+<img src="screenshots/ubuntu/ssh_config.png" width="700">
+
+### System Verification (After Proper Installation)
+
+This screenshot verifies the Ubuntu version, hostname, and IP configuration, confirming the server is correctly installed and connected to the NAT subnet.
+
+<img src="screenshots/ubuntu/system_check.png" width="800">
+
+---
+
+
+
 
 
