@@ -11,287 +11,441 @@
 8. [Agent Deployment & Log Onboarding](#8-agent-deployment--log-onboarding)
 
 
+---
+
 ## 1. Project Overview
 
-This repository documents the design and implementation of a personal Security Operations Center (SOC) home lab built to simulate real-world blue team monitoring and detection workflows.
+This repository documents the design and implementation of a foundational Security Operations Center (SOC) home lab focused on infrastructure deployment and log pipeline validation.
 
-The primary goal of this project is to gain hands-on experience with log analysis, threat detection, and incident investigation by deploying a SIEM platform and a network intrusion detection system inside an isolated virtualized environment.
+The primary objective of this project is to build and configure a functioning SIEM environment using Wazuh within an isolated virtualized network. The lab simulates a basic SOC monitoring setup where endpoint logs are collected, processed, indexed, and visualized in a centralized dashboard.
 
-The lab is intentionally designed to run on limited hardware (8GB RAM, dual-core CPU), requiring careful resource allocation and architectural decisions to maintain performance while preserving realism.
+The environment is intentionally designed to operate under limited hardware resources (8GB host RAM), requiring careful virtual machine sizing and service optimization to ensure stable performance.
 
-Through this project, I aim to:
+Through this project, I demonstrate:
 
-* Build practical experience with SIEM and IDS deployment
-* Generate and analyze security events in a controlled lab
-* Simulate attacker techniques and observe detection behavior
-* Understand how alerts map to real-world attack patterns
+* Deployment of a centralized Ubuntu-based SOC server
+* Installation and configuration of the Wazuh all-in-one SIEM stack
+* Secure onboarding of a monitored endpoint
+* Validation of log ingestion and real-time alert visibility
+* Firewall configuration and connectivity troubleshooting
 
-This project is structured and documented incrementally to reflect a real SOC deployment lifecycle — from infrastructure setup to detection engineering and incident response analysis.
+This project represents the infrastructure foundation of a larger SOC lab series and establishes a fully operational monitoring pipeline ready for future detection and investigation projects.
 
 ---
 
 ## 2. Lab Objectives
 
-The lab is designed to replicate core functions of a basic Security Operations Center within a controlled virtual environment.
+This project focuses on building the foundational infrastructure of a functional Security Operations Center (SOC) within a controlled virtual environment.
 
-The key objectives of this setup are:
+The primary objectives of this lab are:
 
 * Deploy a centralized Ubuntu Server to function as the SOC node
-* Install and configure a SIEM platform for log aggregation and analysis
-* Integrate a network-based intrusion detection system (IDS)
-* Simulate attacker activity from a separate machine within an isolated network
-* Generate, capture, and investigate security alerts
-* Analyze detection logic and correlate events
-* Document findings in a structured and professional format
+* Install and configure a SIEM platform using Wazuh
+* Configure secure remote access and basic server hardening
+* Establish a controlled NAT-based virtual network for internal communication
+* Onboard a monitored endpoint (Kali Linux) using the Wazuh agent
+* Validate successful log ingestion from endpoint to SIEM
+* Confirm alert generation and dashboard visibility
+* Troubleshoot firewall and connectivity issues
 
-The long-term goal is to build practical blue team experience by moving beyond theoretical concepts into hands-on monitoring and incident analysis.
+The goal of this phase is to establish a stable monitoring foundation that accurately simulates log collection and centralized visibility within a SOC environment.
+
+This project intentionally focuses on infrastructure deployment and log pipeline validation. Advanced detection engineering, attack simulation, and incident investigation will be addressed in subsequent projects within this SOC lab series.
+
+---
+## 3. Lab Architecture
+
+The SOC lab is deployed within a virtualized environment to simulate a simplified internal enterprise network. The architecture separates the monitoring server and the endpoint to reflect a realistic centralized logging model.
+
+The environment consists of the following components:
+
+| Component                         | Role in the Lab                                                           |
+| --------------------------------- | ------------------------------------------------------------------------- |
+| Host Machine (VMware Workstation) | Runs and manages all virtual machines                                     |
+| Ubuntu Server (SOC Node)          | Centralized SIEM server for log collection, processing, and visualization |
+| Kali Linux (Monitored Endpoint)   | Generates system and security events forwarded to the SIEM                |
+| NAT Virtual Network               | Provides isolated internal subnet with internet access                    |
+| Wazuh (All-in-One Deployment)     | Log collection, indexing (OpenSearch), detection engine, and dashboard    |
 
 ---
 
-## 3. Lab Architecture
+### Architectural Flow
 
-The SOC lab is deployed using a virtualized environment to simulate a controlled internal network. The architecture separates monitoring, analysis, and attack simulation components to reflect a simplified real-world SOC structure.
+The Ubuntu Server acts as the centralized SOC node where the Wazuh Manager, Indexer, and Dashboard are deployed in all-in-one mode to conserve system resources.
 
-The environment consists of:
+The Kali Linux VM operates as a monitored endpoint. Logs generated on this system are collected by the Wazuh agent and securely forwarded to the manager.
 
-| Component / Tool               | Role in the Lab                                             |
-| ------------------------------ | ----------------------------------------------------------- |
-| **Host Machine (VMware)**      | Runs and manages all virtual machines                       |
-| **Ubuntu Server (SOC Node)**   | Centralized log collection, analysis, and monitoring server |
-| **Kali Linux (Attacker Node)** | Simulates offensive security activity and attack scenarios  |
-| **NAT Virtual Network**        | Provides an isolated internal subnet with internet access   |
-| **Wazuh**                      | SIEM platform for threat detection and alert generation     |
-| **Elastic Stack**              | Log indexing, storage, and visualization backend            |
+```
+Kali Linux (Endpoint)
+        ↓
+Wazuh Agent
+        ↓
+Wazuh Manager (Ubuntu SOC Node)
+        ↓
+Indexer (OpenSearch)
+        ↓
+Wazuh Dashboard
+```
 
+---
 
-The Ubuntu Server acts as the core SOC system where SIEM and IDS components will be installed. All simulated attack traffic generated from the attacker machine will traverse the isolated virtual network and be monitored by the SOC node.
+### Architectural Design Considerations
 
-<img src="screenshots/ubuntu/Architecture_Flow.png" width="650">
+This architecture was intentionally designed to:
 
-This architecture ensures:
+* Operate within limited hardware resources (4GB SOC VM RAM)
+* Maintain isolation from the external network
+* Simulate centralized log aggregation
+* Allow realistic endpoint onboarding workflows
+* Provide clear visibility into log ingestion and alert generation
 
-* Safe experimentation without affecting the external network
-* Controlled attack simulation
-* Clear separation of roles (attacker vs defender)
-* Realistic detection workflow
+The current design establishes the foundational monitoring layer of the SOC lab. Detection engineering, attack simulation, and multi-endpoint expansion will be implemented in future phases of the project series.
+
+---
 
 ## 4. Network Configuration
 
-All virtual machines in this SOC Home Lab are configured to use **NAT networking mode** within the hypervisor. This ensures that each VM resides within the same internal virtual subnet while still having internet access through the host machine.
+All virtual machines in this SOC lab are configured using **NAT networking mode** within VMware Workstation. This ensures that each VM resides within the same internal virtual subnet while maintaining outbound internet access through the host machine.
 
-For this lab, the internal subnet is configured as:
+The internal subnet for this lab is configured as:
+
+* Network Range: `192.168.1.0/24`
+* Subnet Mask: `255.255.255.0`
+* Default Gateway: Provided by VMware NAT service
+* Internet Access: Routed through host system
 
 <img src="screenshots/ubuntu/nat_config.png" width="600">
 
-This means:
-* All VMs receive IP addresses within the range 192.168.1.1 – 192.168.1.254
-* The subnet mask is 255.255.255.0
-* The VMs can communicate directly with each other
-* External internet access is routed through the host system
+---
 
-Using a shared subnet is critical for a SOC lab environment to ensure:
+### Why NAT Networking Was Chosen
 
-* The attacker machine (**Kali Linux**) must be able to reach the target systems
-* The target machines must forward logs to the SIEM server
-* The SIEM components (**Wazuh** + **Elastic Stack**) must communicate internally
+NAT networking provides:
 
-This configuration simulates a small enterprise internal LAN environment, making it ideal for attack simulation, log collection, and detection testing.
+* Isolated internal communication between VMs
+* Safe attack simulation within a controlled subnet
+* Internet access for package installation and updates
+* Separation from the physical LAN
 
-## 5. Lab Environment Configuration
+This configuration ensures:
 
-### Host Virtualization Platform
-
-The SOC Home Lab is deployed using **VMware Workstation** as the hypervisor. VMware provides stable networking controls and resource allocation, making it suitable for simulating a small enterprise lab environment.
-
-### Operating System
-
-The primary server for this lab runs:
-
-**Ubuntu 22.04.5 LTS Server**
-
-Ubuntu Server was selected due to:
-
-* Long-Term Support (LTS) stability
-* Wide compatibility with security tools
-* Lightweight footprint suitable for SIEM deployments
-* Strong community and enterprise adoption
+* The Kali endpoint can communicate with the Ubuntu SOC server
+* The Wazuh agent can forward logs to the manager
+* The dashboard remains accessible via the SOC server’s internal IP
 
 ---
 
-### Virtual Machine Specifications
+### Internal Communication Requirements
 
-The Ubuntu Server VM is configured with the following resources:
+For proper SOC operation, the following communication paths must function:
+
+* Kali → Ubuntu SOC Server (Agent communication)
+* Ubuntu Server → Internal indexing services
+* Host Browser → Wazuh Dashboard (HTTPS 443)
+
+Firewall rules were configured accordingly to allow:
+
+* SSH access (port 22)
+* Agent communication (1514, 1515)
+* Dashboard access (443)
+
+---
+
+## 5. Lab Environment Configuration
+
+This section outlines the virtualization platform, operating system selection, and virtual machine resource allocation used to build the SOC infrastructure.
+
+---
+
+### 5.1 Host Virtualization Platform
+
+The SOC lab is deployed using **VMware Workstation** as the hypervisor.
+
+VMware was selected because it provides:
+
+* Stable NAT networking controls
+* Flexible resource allocation
+* Reliable VM performance under limited hardware
+* Snapshot capability for safe testing and rollback
+
+This allows safe experimentation while maintaining isolation from the physical host network.
+
+---
+
+### 5.2 Operating System Selection
+
+The primary SOC server runs:
+
+**Ubuntu Server 22.04 LTS**
+
+Ubuntu Server was chosen due to:
+
+* Long-Term Support (LTS) stability
+* Lightweight resource footprint
+* Strong compatibility with security tooling
+* Wide adoption in enterprise and cloud environments
+
+Using an LTS release ensures long-term package stability and security updates.
+
+---
+
+### 5.3 Ubuntu SOC Server Specifications
+
+The Ubuntu Server VM was configured to balance performance and hardware constraints.
 
 | Resource | Allocation   |
 | -------- | ------------ |
 | RAM      | 4 GB         |
-| CPU      | 2 cores      |
+| CPU      | 2 Cores      |
 | Disk     | 40 GB        |
 | Network  | VMnet8 (NAT) |
 
 <img src="screenshots/ubuntu/vm_settings.png" width="700">
 
-### Disk Allocation (While Server Installation)
+This allocation was intentionally chosen to:
 
-Confirmation of the allocated disk space during Ubuntu Server installation.
+* Support the Wazuh all-in-one deployment
+* Maintain responsiveness within an 8GB host limit
+* Allow indexing and dashboard services to operate reliably
+
+---
+
+### 5.4 Disk Allocation During Installation
+
+Disk configuration was validated during Ubuntu installation to ensure the full 40GB allocation was recognized.
 
 <img src="screenshots/ubuntu/storage_config.png" width="700">
 
-### SSH Installation Verification (While Server Installation)
+Proper disk allocation is critical for SIEM deployments, as indexing and log storage can consume significant space over time.
 
-OpenSSH Server was enabled during installation to allow secure remote access to the Ubuntu Server VM.
+---
+
+### 5.5 SSH Configuration Verification
+
+OpenSSH Server was enabled during installation to allow secure remote access to the SOC node.
 
 <img src="screenshots/ubuntu/ssh_config.png" width="700">
 
-### System Verification (After Proper Installation)
+SSH access enables:
 
-This screenshot verifies the Ubuntu version, hostname, and IP configuration, confirming the server is correctly installed and connected to the NAT subnet.
+* Remote administration
+* Secure command execution
+* Easier management from the host system
+
+---
+
+### 5.6 System Verification After Installation
+
+Post-installation checks confirmed:
+
+* Correct Ubuntu version
+* Proper hostname configuration
+* Valid IP assignment within the NAT subnet
 
 <img src="screenshots/ubuntu/system_check.png" width="800">
 
+This verification step ensures the server is fully operational before proceeding to hardening and SIEM installation.
+
 ---
 
-### 6. Server Hardening & Initial Setup
+## 6. Server Hardening & Initial Setup
 
-Before deploying security monitoring tools, it is critical to ensure that the underlying server is properly hardened. A misconfigured SOC server can become a security risk itself.
+Before deploying the SIEM components, the Ubuntu SOC server was updated, cleaned, and minimally hardened to ensure system stability and security readiness.
 
-This section focuses on patching, securing remote access, and validating system resources before installing SIEM components.
+---
 
-#### 6.1 System Update & Upgrade
+## 6.1 System Update and Package Upgrade
 
-**Purpose:** Ensure the OS is fully patched and protected.
-
-**Commands run:**
+The package index was refreshed and all installed packages were upgraded to their latest stable versions.
 
 ```bash
-sudo apt update && sudo apt upgrade -y
+sudo apt update
+sudo apt upgrade -y
 ```
 
-**Screenshot:** Shows successful completion of updates.
+This step ensures:
 
-<img src="screenshots/ubuntu/update_complete.png" width="700">
+* Latest security patches are applied
+* Dependency consistency
+* Stable baseline before Wazuh installation
+
+Evidence of successful update and upgrade completion is shown below:
+
+<img src="/screenshots/ubuntu/update_complete.png" width="800">
 
 ---
 
-#### 6.2 6.2 SSH Service Verification
+## 6.2 Removal of Unnecessary Snap Packages
 
-**Purpose:** Verify OpenSSH service is running securely and root login is disabled.
+To reduce system overhead and maintain a minimal attack surface, unnecessary snap packages were reviewed and removed where applicable.
 
-**Command run:**
+This helps:
+
+* Reduce background services
+* Improve resource efficiency
+* Maintain a lightweight server profile
+
+<img src="/screenshots/ubuntu/usless_snaps.png" width="800">
+
+---
+
+## 6.3 Firewall Baseline Configuration (UFW)
+
+As part of initial server hardening, Ubuntu’s Uncomplicated Firewall (UFW) was enabled to restrict inbound traffic by default.
+
+Initially, only SSH access was allowed to ensure secure remote administration.
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw enable
+```
+
+Firewall status verification confirmed that UFW was active with minimal exposed services.
+
+<img src="/screenshots/ubuntu/ufw_status.png" width="800">
+
+At this stage, only essential administrative access was permitted.
+Additional ports required for Wazuh services were configured later during SIEM deployment (Section 8).
+
+
+---
+
+
+## 6.4 SSH Service Verification
+
+Secure Shell (SSH) service was verified to ensure remote administrative access is functional.
 
 ```bash
 sudo systemctl status ssh
 ```
 
-**Screenshot:** Confirms SSH service is active and running.
+Verification output confirming active SSH service:
 
-<img src="screenshots/ubuntu/ssh_status.png" width="700">
+<img src="/screenshots/ubuntu/ssh_status.png" width="800">
+
+SSH access enables secure remote system management and operational flexibility.
 
 ---
 
-#### 6.3 Firewall Setup (UFW)
+## 6.5 Network Configuration Verification
 
-**Purpose:** Limit access to only necessary ports and services.
-
-**Commands run:**
+The server’s IP configuration was validated to ensure proper NAT subnet assignment and active network interface.
 
 ```bash
-sudo ufw allow ssh
-sudo ufw enable
-sudo ufw status
+ip a
 ```
 
-**Screenshot:** Shows UFW enabled and rules applied.
+Verification confirms:
 
-<img src="screenshots/ubuntu/ufw_status.png" width="700">
+* Active network interface
+* Proper NAT IP assignment (192.168.x.x)
+* Valid routing configuration
+
+<img src="/screenshots/ubuntu/system_check.png" width="800">
 
 ---
 
-#### 6.4 Disk & Resource Verification
+## 6.6 Resource Validation
 
-**Purpose:** Confirm VM resources match the planned lab setup.
-
-**Commands run:**
+System memory and disk availability were verified before proceeding with SIEM deployment.
 
 ```bash
-df -h          # Disk usage
-free -h        # RAM usage
-lscpu          # CPU info
+free -h
+df -h
 ```
 
-**Screenshot:** Shows proper disk, RAM, and CPU allocation.
+This confirms:
 
-<img src="screenshots/ubuntu/resource_check.png" width="700">
+* Allocated RAM availability
+* Disk allocation integrity
+* Readiness for indexing and log storage
 
----
-
-#### 6.5 Summary
-
-At this stage, the Ubuntu Server is hardened, updated, and validated. The environment is now prepared for SIEM and IDS deployment in the next phase of the SOC build.
+<img src="/screenshots/ubuntu/resource_check.png" width="800">
 
 ---
 
+# Hardening Summary
 
-# 7. Wazuh SIEM Installation & Configuration
+The Ubuntu SOC server was prepared through:
 
-This section documents the deployment of the Wazuh all-in-one SIEM stack on the Ubuntu Server SOC node. The installation includes the Wazuh Manager, Wazuh Indexer (OpenSearch), Filebeat, and the Wazuh Dashboard.
+* Full system update and upgrade
+* Removal of unnecessary snap packages
+* Firewall configuration and enforcement
+* SSH verification
+* Network validation
+* Resource verification
 
-The all-in-one deployment model was selected to optimize resource usage within the lab’s 4GB RAM environment while maintaining full SIEM functionality.
+These steps establish a secure and stable baseline prior to Wazuh installation.
+
+---
+
+## 7. Wazuh SIEM Installation & Configuration
+
+This section documents the deployment of the Wazuh all-in-one SIEM stack on the Ubuntu Server SOC node.
+
+The installation includes:
+
+* Wazuh Manager
+* Wazuh Indexer (OpenSearch)
+* Filebeat
+* Wazuh Dashboard
+
+The **all-in-one deployment model** was selected to optimize performance within the lab’s 4GB RAM allocation while maintaining full SIEM functionality.
 
 ---
 
 ## 7.1 Installation Script Download
 
-The official Wazuh installation script was downloaded directly from the Wazuh package repository.
-
-**Command used:**
+The official Wazuh installation script was downloaded from the Wazuh package repository.
 
 ```bash
 curl -O https://packages.wazuh.com/4.14/wazuh-install.sh
 ```
 
-This script automates the deployment of all required Wazuh components.
+This script automates installation and configuration of all required Wazuh components.
 
-<img src="screenshots/wazuh/wazuh_script.png" width="700">
+<img src="/screenshots/wazuh/wazuh_script.png" width="800">
 
 ---
 
 ## 7.2 Executing the All-in-One Installation
 
-The script was made executable and run in all-in-one mode:
+The script was made executable and executed in all-in-one mode:
 
 ```bash
 chmod +x wazuh-install.sh
 sudo ./wazuh-install.sh -a
 ```
 
-The installation process:
+The installation process performed the following actions:
 
-* Installed required dependencies
+* Installed system dependencies
 * Deployed Wazuh Manager
-* Installed and configured OpenSearch
+* Installed and configured OpenSearch (Indexer)
 * Installed Filebeat
-* Configured Wazuh Dashboard
+* Configured and secured the Wazuh Dashboard
 
-<img src="screenshots/wazuh/wazuh_install_start.png" width="700">
+Installation output during deployment:
+
+<img src="/screenshots/wazuh/wazuh_install_start.png" width="800">
 
 ---
 
 ## 7.3 Dashboard Credential Generation
 
-Upon successful installation, the script generated default dashboard credentials required for web access.
+Upon successful completion, the installation script generated default dashboard credentials.
 
-These credentials allow authentication to the Wazuh Dashboard.
+These credentials are required to authenticate to the Wazuh Dashboard via HTTPS.
 
-<img src="screenshots/wazuh/wazuh_dashboard_credentials.png" width="700">
+<img src="/screenshots/wazuh/wazuh_dashboard_credentials.png" width="800">
+
+The generated credentials were securely stored for later use.
 
 ---
 
 ## 7.4 Service Verification
 
-After installation, all Wazuh services were verified to ensure they were active and running.
-
-**Commands used:**
+After installation, all Wazuh-related services were verified to ensure proper startup and operational status.
 
 ```bash
 sudo systemctl status wazuh-manager
@@ -306,138 +460,173 @@ All services returned:
 active (running)
 ```
 
-<img src="screenshots/wazuh/wazuh_services_running.png" width="700">
+Service verification output:
+
+<img src="/screenshots/wazuh/wazuh_services_running.png" width="800">
+
+This confirms:
+
+* Manager is processing events
+* Indexer is operational
+* Dashboard is accessible
+* Log shipping via Filebeat is active
 
 ---
 
-## 7.5 Firewall Configuration (Port 443)
+## 7.5 Firewall Rule Expansion for Wazuh Services
 
-Since UFW was previously enabled during server hardening, HTTPS traffic had to be explicitly allowed for dashboard access.
+During initial hardening (Section 6), only SSH access was allowed.
 
-**Command used:**
+To enable secure dashboard access, HTTPS (Port 443) was explicitly permitted.
 
 ```bash
 sudo ufw allow 443/tcp
 ```
 
-This ensures secure browser-based access to the Wazuh Dashboard.
+Updated firewall configuration:
 
-<img src="screenshots/wazuh/wazuh_port443_open.png" width="700">
+<img src="/screenshots/wazuh/wazuh_port443_open.png" width="800">
+
+This controlled expansion demonstrates a security-first deployment model — services are exposed only when required.
 
 ---
 
 ## 7.6 Dashboard Access & Verification
 
-The Wazuh Dashboard was accessed from the host machine using:
+The Wazuh Dashboard was accessed from the host machine using the server’s NAT IP address:
 
 ```
 https://192.168.1.136
 ```
 
-Because the installation uses a self-signed certificate, the browser displayed a security warning, which was bypassed for lab purposes.
-
-Successful login confirmed:
-
-* Wazuh services are operational
-* OpenSearch indexing is functioning
-* Dashboard is properly connected to the manager
-
-### Login Page
-
-<img src="screenshots/wazuh/wazuh_dashboard_login.png" width="700">
-
-### Dashboard Home
-
-<img src="screenshots/wazuh/wazuh_dashboard_home.png" width="700">
+Since the installation uses a self-signed SSL certificate, the browser displayed a security warning, which was bypassed for lab purposes.
 
 ---
 
-## 7.7 Summary
+### Dashboard Login Page
+
+<img src="/screenshots/wazuh/wazuh_dashboard_login.png" width="800">
+
+---
+
+### Dashboard Home Interface
+
+<img src="/screenshots/wazuh/wazuh_dashboard_home.png" width="800">
+
+Successful login confirmed:
+
+* Dashboard connectivity to Wazuh Manager
+* OpenSearch indexing functionality
+* Full SIEM operational status
+
+---
+
+## 7.7 Deployment Summary
 
 At this stage, the Wazuh SIEM stack is fully deployed and operational within the SOC lab environment.
 
 The Ubuntu Server now functions as:
 
 * Centralized log collection server
-* Detection engine
+* Detection and correlation engine
 * Alerting platform
-* Visualization dashboard
+* Security visualization dashboard
 
-The environment is now prepared for endpoint agent deployment and attack simulation testing in the next phase.
+The infrastructure is now prepared for:
 
+* Endpoint agent deployment
+* Log ingestion testing
+* Attack simulation and detection validation
 ---
 
-# 8. Agent Deployment & Log Onboarding
+## 8. Agent Deployment & Log Onboarding
 
-With the Wazuh SIEM stack operational on the Ubuntu SOC node, the next phase is onboarding an endpoint into the monitoring environment.
+With the Wazuh SIEM stack operational on the Ubuntu SOC node, the next phase involves onboarding a monitored endpoint.
 
-Kali Linux will act as a monitored endpoint, sending logs to the SIEM. This mirrors real SOC workflows where endpoints must be enrolled before detection and analysis.
+A Kali Linux virtual machine was configured as a client endpoint and enrolled into the Wazuh monitoring infrastructure. This mirrors real-world SOC workflows where endpoints must be securely registered before telemetry ingestion begins.
 
 ---
 
 ## 8.1 Kali Linux VM Configuration
 
-VM configuration optimized for 8GB host:
+The Kali Linux VM was provisioned within VMware using NAT networking to reside within the same internal subnet as the SOC server.
 
 | Resource | Allocation   |
 | -------- | ------------ |
 | RAM      | 2 GB         |
-| CPU      | 2 cores      |
+| CPU      | 2 Cores      |
 | Disk     | 30 GB        |
 | Network  | VMnet8 (NAT) |
 
-<img src="screenshots/agent/kali_vm_hardware_config.png" width="700">
+<img src="/screenshots/agent/kali_vm_hardware_config.png" width="800">
+
+This configuration balances endpoint realism with host resource constraints (8GB total system RAM).
 
 ---
 
-## 8.2 Network Verification
+## 8.2 Network Connectivity Verification
 
-Verify Kali IP:
+Before agent installation, internal connectivity was validated.
+
+### Verify Kali IP Address
 
 ```bash
 ip a
 ```
 
-Ping the Wazuh Manager:
+<img src="/screenshots/agent/kali_ip_address.png" width="800">
+
+### Test Connectivity to Wazuh Manager
 
 ```bash
 ping 192.168.1.136
 ```
 
-<img src="screenshots/agent/kali_ip_address.png" width="800">
-<img src="screenshots/agent/kali_ping_manager_success.png" width="800">
+<img src="/screenshots/agent/kali_ping_manager_success.png" width="800">
+
+Successful ICMP responses confirm:
+
+* Both systems reside in the same NAT subnet
+* Internal communication is functional
+* No firewall blocking at the network layer
 
 ---
 
 ## 8.3 Installing the Wazuh Agent
 
-Add GPG key:
+### Add Wazuh GPG Key
 
 ```bash
 curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | sudo gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
 ```
 
-<img src="screenshots/agent/wazuh_gpg_key_added.png" width="800">
+<img src="/screenshots/agent/wazuh_gpg_key_added.png" width="800">
 
-Add repository:
+---
+
+### Add Wazuh Repository
 
 ```bash
 echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt stable main" | sudo tee /etc/apt/sources.list.d/wazuh.list
 ```
 
-<img src="screenshots/agent/wazuh_repo_added.png" width="800">
+<img src="/screenshots/agent/wazuh_repo_added.png" width="800">
 
-Update & install agent:
+---
+
+### Update and Install Agent
 
 ```bash
 sudo apt update
 sudo WAZUH_MANAGER='192.168.1.136' apt install wazuh-agent -y
 ```
 
-<img src="screenshots/agent/apt_update_wazuh_repo.png" width="800">
-<img src="screenshots/agent/wazuh_agent_installation.png" width="800">
+<img src="/screenshots/agent/apt_update_wazuh_repo.png" width="800">
+<img src="/screenshots/agent/wazuh_agent_installation.png" width="800">
 
-Enable and start agent:
+---
+
+### Enable and Start Agent Service
 
 ```bash
 sudo systemctl enable wazuh-agent
@@ -445,111 +634,160 @@ sudo systemctl start wazuh-agent
 sudo systemctl status wazuh-agent
 ```
 
-<img src="screenshots/agent/wazuh_agent_service_running.png" width="800">
+<img src="/screenshots/agent/wazuh_agent_service_running.png" width="800">
+
+Service status confirmed the agent was active and attempting to communicate with the manager.
 
 ---
 
-## 8.4 Secure Agent Registration (Key-Based)
+## 8.4 Secure Agent Registration (Key-Based Authentication)
 
-On Ubuntu manager, add Kali agent:
+Wazuh uses key-based authentication between agents and the manager.
+
+### Add Agent on Manager
+
+On the Ubuntu SOC server:
 
 ```bash
 sudo /var/ossec/bin/manage_agents
 ```
 
-<img src="screenshots/agent/manage_agents_add_kali.png" width="800">
+<img src="/screenshots/agent/manage_agents_add_kali.png" width="800">
 
-Extract agent key:
+An agent entry was created for `kali-linux`.
 
-<img src="screenshots/agent/kali_import_agent_key.png" width="800">
+---
 
-Import key on Kali using the same utility and restart the agent. Verify on manager:
+### Extract and Import Agent Key
+
+The generated key was extracted:
+
+<img src="/screenshots/agent/kali_import_agent_key.png" width="800">
+
+The key was then imported on the Kali machine using the same `manage_agents` utility.
+
+After importing the key, the agent service was restarted.
+
+---
+
+### Verify Agent Registration on Manager
 
 ```bash
 sudo /var/ossec/bin/agent_control -l
 ```
 
-<img src="screenshots/agent/agent_control_list_output.png" width="800">
+<img src="/screenshots/agent/agent_control_list_output.png" width="800">
+
+The output confirms:
+
+* Agent ID assigned
+* Status: Active
+* Secure communication established
 
 ---
 
-## 8.5 Firewall Considerations
+## 8.5 Firewall Validation for Agent Communication
 
-If the agent cannot connect, ensure ports are allowed on the manager:
+If agent connectivity issues occur, ensure required ports are allowed on the manager:
 
 ```bash
 sudo ufw allow 1514
 sudo ufw allow 1515
 ```
 
-<img src="screenshots/agent/if_server_firewall_blocks_port_1514.png" width="800">
+<img src="/screenshots/agent/if_server_firewall_blocks_port_1514.png" width="800">
+
+Ports 1514 and 1515 are required for:
+
+* Agent data transmission
+* Secure registration
+
+This aligns with the firewall configuration strategy defined in earlier sections.
 
 ---
 
-## 8.6 Dashboard Verification
+## 8.6 Dashboard Agent Verification
 
-Access the Wazuh Dashboard:
+The Wazuh Dashboard was accessed via:
 
 ```
 https://192.168.1.136
 ```
 
-Under **Wazuh → Agents**, verify `kali-linux`:
+Under **Wazuh → Agents**, the endpoint `kali-linux` appeared as:
 
 * Status: Active
-* OS correctly identified
-* Keepalive signals received
+* Operating System: Detected correctly
+* Keepalive signals: Received
 
-<img src="screenshots/agent/wazuh_dashboard_agent_active.png" width="800">
+<img src="/screenshots/agent/wazuh_dashboard_agent_active.png" width="800">
+
+This confirms successful onboarding.
 
 ---
 
 ## 8.7 Log Generation & Event Validation
 
-Generate events on Kali:
+To validate real-time log ingestion, controlled events were generated on the Kali endpoint.
 
-**Authentication attempts:**
+---
+
+### Authentication Attempts
 
 ```bash
 sudo su -
 sudo su invaliduser
 ```
 
-<img src="screenshots/agent/kali_auth_log_generation.png" width="800">
+<img src="/screenshots/agent/kali_auth_log_generation.png" width="800">
 
-**Package installation:**
+These actions generate authentication-related logs.
+
+---
+
+### Package Installation Activity
 
 ```bash
 sudo apt install sl -y
 ```
 
-<img src="screenshots/agent/kali_package_install_log.png" width="800">
+<img src="/screenshots/agent/kali_package_install_log.png" width="800">
 
-**Events visible in Dashboard (Security Events filtered by `kali-linux`):**
-
-<img src="screenshots/agent/wazuh_event_validation_kali1.png" width="800">
-<img src="screenshots/agent/wazuh_event_validation_kali2.png" width="800">
+This generates system and package management logs.
 
 ---
 
-## 8.8 Summary
+### Event Visibility in Dashboard
 
-Kali endpoint is now:
+Events were filtered in the Wazuh Dashboard under Security Events for `kali-linux`.
 
-* Installed with Wazuh agent
-* Securely registered and active
-* Sending real-time logs to the SIEM
+<img src="/screenshots/agent/wazuh_event_validation_kali1.png" width="800">
+<img src="/screenshots/agent/wazuh_event_validation_kali2.png" width="800">
 
-The SOC lab is fully operational for attack simulation and monitoring.
+The dashboard confirmed:
+
+* Log ingestion
+* Rule matching
+* Alert generation
+* Indexed event storage
 
 ---
-Perfect. Below is a **clean, professional, copy-paste ready GitHub section** including:
 
-* Project Completion
-* What I Learned
-* Future Enhancements
+## 8.8 Deployment Summary
 
-Structured properly for a SOC portfolio README.
+The Kali Linux endpoint is now:
+
+* Installed with Wazuh Agent
+* Securely registered with the SOC Manager
+* Actively sending logs
+* Generating detectable events
+
+The SOC lab environment is now fully operational and ready for:
+
+* Attack simulation
+* Detection engineering
+* Alert tuning
+* Incident response exercises
 
 ---
 
@@ -610,7 +848,7 @@ The lab successfully simulates a basic SOC monitoring pipeline.
 
 ## Final Outcome
 
-This project demonstrates successful deployment of a functional SIEM-based monitoring environment using Wazuh.
+This project demonstrates the successful deployment of a functional SIEM-based monitoring environment using Wazuh.
 
 The environment is fully operational and ready for advanced detection testing and incident analysis in future projects.
 
