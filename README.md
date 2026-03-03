@@ -1,4 +1,4 @@
-# SOC Home Lab
+# SOC Home Lab – Phase 1: SIEM Infrastructure & Linux Endpoint Validation
 *Infrastructure Deployment | Log Pipeline Validation | Wazuh SIEM*
 
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04-orange?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com/)
